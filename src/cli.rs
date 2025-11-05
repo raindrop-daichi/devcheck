@@ -44,6 +44,10 @@ pub struct Args {
     #[arg(long)]
     pub manifest_path: Option<String>,
 
+    /// Run checks on all workspace members
+    #[arg(long)]
+    pub workspace: bool,
+
     /// Number of parallel jobs
     #[arg(long, short)]
     pub jobs: Option<usize>,

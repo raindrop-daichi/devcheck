@@ -16,7 +16,13 @@ impl Checker for FmtChecker {
         let start = Instant::now();
 
         let mut cmd = Command::new("cargo");
-        cmd.arg("fmt").arg("--").arg("--check");
+        cmd.arg("fmt");
+
+        if config.workspace {
+            cmd.arg("--all");
+        }
+
+        cmd.arg("--").arg("--check");
 
         if let Some(ref path) = config.manifest_path {
             cmd.arg("--manifest-path").arg(path);

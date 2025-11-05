@@ -1,0 +1,29 @@
+# devcheck configuration file example
+# Copy this file to .devcheck.toml to use it
+
+[devcheck]
+# Timeout for each check in seconds
+timeout = 300
+
+# Run checks in parallel
+parallel = true
+
+# Formatting check configuration
+[devcheck.fmt]
+enabled = true
+args = []
+
+# Clippy check configuration
+[devcheck.clippy]
+enabled = true
+args = ["--", "-D", "warnings"]
+
+# Test check configuration
+[devcheck.test]
+enabled = true
+args = []
+
+# Build check configuration (disabled by default)
+[devcheck.build]
+enabled = false
+args = []

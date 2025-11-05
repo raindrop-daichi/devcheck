@@ -18,6 +18,10 @@ impl Checker for BuildChecker {
         let mut cmd = Command::new("cargo");
         cmd.arg("build");
 
+        if config.workspace {
+            cmd.arg("--workspace");
+        }
+
         if let Some(ref path) = config.manifest_path {
             cmd.arg("--manifest-path").arg(path);
         }

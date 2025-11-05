@@ -1,5 +1,8 @@
 use crate::cli::Args;
 use crate::error::{DevCheckError, Result};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
 use std::time::Instant;
 
 #[derive(Debug, Clone)]
@@ -16,6 +19,7 @@ pub struct Config {
     pub manifest_path: Option<String>,
     pub jobs: Option<usize>,
     pub timeout: u64,
+    pub workspace: bool,
     pub start_time: Instant,
 }
 
@@ -32,8 +36,75 @@ pub enum ColorMode {
     Never,
 }
 
+/// Configuration file format (.devcheck.toml)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ConfigFile {
+    #[serde(default)]
+    pub devcheck: DevCheckConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DevCheckConfig {
+    #[serde(default = "default_timeout")]
+    pub timeout: u64,
+    #[serde(default = "default_true")]
+    pub parallel: bool,
+    #[serde(default)]
+    pub fmt: CheckConfig,
+    #[serde(default)]
+    pub clippy: CheckConfig,
+    #[serde(default)]
+    pub test: CheckConfig,
+    #[serde(default)]
+    pub build: CheckConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CheckConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+fn default_timeout() -> u64 {
+    300
+}
+
+fn default_true() -> bool {
+    true
+}
+
+impl Default for DevCheckConfig {
+    fn default() -> Self {
+        Self {
+            timeout: 300,
+            parallel: true,
+            fmt: CheckConfig::default(),
+            clippy: CheckConfig::default(),
+            test: CheckConfig::default(),
+            build: CheckConfig {
+                enabled: false,
+                args: vec![],
+            },
+        }
+    }
+}
+
+impl Default for CheckConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            args: vec![],
+        }
+    }
+}
+
 impl Config {
     pub fn from_args(args: &Args) -> Result<Self> {
+        // Try to load config file
+        let config_file = Self::load_config_file()?;
+
         // Determine which checks to run
         let (run_fmt, run_clippy, run_test, run_build) = if args.no_default {
             // If no_default is set, only run explicitly specified checks
@@ -42,8 +113,13 @@ impl Config {
             // If any check is explicitly specified, run only those
             (args.fmt, args.clippy, args.test, args.build)
         } else {
-            // Default: run fmt, clippy, and test (but not build)
-            (true, true, true, false)
+            // Use config file or defaults
+            (
+                config_file.devcheck.fmt.enabled,
+                config_file.devcheck.clippy.enabled,
+                config_file.devcheck.test.enabled,
+                config_file.devcheck.build.enabled,
+            )
         };
 
         let format = match args.format.as_str() {
@@ -74,6 +150,13 @@ impl Config {
             return Err(DevCheckError::CargoNotFound);
         }
 
+        // Use timeout from args or config file
+        let timeout = if args.timeout != 300 {
+            args.timeout
+        } else {
+            config_file.devcheck.timeout
+        };
+
         Ok(Config {
             run_fmt,
             run_clippy,
@@ -85,8 +168,30 @@ impl Config {
             color,
             manifest_path: args.manifest_path.clone(),
             jobs: args.jobs,
-            timeout: args.timeout,
+            timeout,
+            workspace: args.workspace,
             start_time: Instant::now(),
         })
+    }
+
+    fn load_config_file() -> Result<ConfigFile> {
+        let config_path = Path::new(".devcheck.toml");
+
+        if config_path.exists() {
+            let content = fs::read_to_string(config_path).map_err(|e| {
+                DevCheckError::ConfigError(format!("Failed to read .devcheck.toml: {}", e))
+            })?;
+
+            let config: ConfigFile = toml::from_str(&content).map_err(|e| {
+                DevCheckError::ConfigError(format!("Failed to parse .devcheck.toml: {}", e))
+            })?;
+
+            Ok(config)
+        } else {
+            // Return default config if no file exists
+            Ok(ConfigFile {
+                devcheck: DevCheckConfig::default(),
+            })
+        }
     }
 }

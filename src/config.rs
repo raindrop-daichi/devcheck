@@ -20,6 +20,8 @@ pub struct Config {
     pub jobs: Option<usize>,
     pub timeout: u64,
     pub workspace: bool,
+    pub watch: bool,
+    pub custom_checks: std::collections::HashMap<String, CustomCheckConfig>,
     pub start_time: Instant,
 }
 
@@ -27,6 +29,8 @@ pub struct Config {
 pub enum OutputFormat {
     Terminal,
     Json,
+    Html,
+    Markdown,
 }
 
 #[derive(Debug, Clone)]
@@ -57,10 +61,21 @@ pub struct DevCheckConfig {
     pub test: CheckConfig,
     #[serde(default)]
     pub build: CheckConfig,
+    #[serde(default)]
+    pub custom: std::collections::HashMap<String, CustomCheckConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CheckConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CustomCheckConfig {
+    pub command: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
     #[serde(default)]
@@ -87,6 +102,7 @@ impl Default for DevCheckConfig {
                 enabled: false,
                 args: vec![],
             },
+            custom: std::collections::HashMap::new(),
         }
     }
 }
@@ -125,6 +141,8 @@ impl Config {
         let format = match args.format.as_str() {
             "terminal" => OutputFormat::Terminal,
             "json" => OutputFormat::Json,
+            "html" => OutputFormat::Html,
+            "markdown" | "md" => OutputFormat::Markdown,
             _ => {
                 return Err(DevCheckError::ConfigError(format!(
                     "invalid format: {}",
@@ -170,6 +188,8 @@ impl Config {
             jobs: args.jobs,
             timeout,
             workspace: args.workspace,
+            watch: args.watch,
+            custom_checks: config_file.devcheck.custom.clone(),
             start_time: Instant::now(),
         })
     }

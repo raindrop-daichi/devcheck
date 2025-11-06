@@ -1,4 +1,6 @@
-use crate::checker::{BuildChecker, CheckResult, Checker, ClippyChecker, FmtChecker, TestChecker};
+use crate::checker::{
+    BuildChecker, CheckResult, Checker, ClippyChecker, CustomChecker, FmtChecker, TestChecker,
+};
 use crate::config::{Config, OutputFormat};
 use anyhow::Result;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -67,6 +69,24 @@ pub async fn run_checks(config: &Config) -> Result<Vec<CheckResult>> {
         });
     }
 
+    // Spawn tasks for custom checks
+    for (name, check_config) in &config.custom_checks {
+        if check_config.enabled {
+            let config = config.clone();
+            let name_clone = name.clone();
+            let check_config = check_config.clone();
+            let pb = create_progress_bar(&multi_progress, name);
+            tasks.spawn(async move {
+                let checker = CustomChecker::new(name_clone, check_config);
+                let result = checker.run(&config).await;
+                if let Some(pb) = pb {
+                    pb.finish_and_clear();
+                }
+                result
+            });
+        }
+    }
+
     // Collect results
     let mut results = Vec::new();
     while let Some(result) = tasks.join_next().await {
@@ -99,7 +119,8 @@ fn create_progress_bar(
                 .template("{spinner:.blue} {msg}")
                 .unwrap(),
         );
-        pb.set_message(format!("Running cargo {}...", check_name));
+        let message = format!("Running {}...", check_name);
+        pb.set_message(message);
         pb.enable_steady_tick(std::time::Duration::from_millis(100));
         pb
     })

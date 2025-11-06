@@ -24,7 +24,7 @@ pub struct Args {
     #[arg(long)]
     pub no_default: bool,
 
-    /// Output format (terminal or json)
+    /// Output format (terminal, json, html, or markdown)
     #[arg(long, default_value = "terminal")]
     pub format: String,
 
@@ -47,6 +47,10 @@ pub struct Args {
     /// Run checks on all workspace members
     #[arg(long)]
     pub workspace: bool,
+
+    /// Watch mode - re-run checks when files change
+    #[arg(long, short)]
+    pub watch: bool,
 
     /// Number of parallel jobs
     #[arg(long, short)]

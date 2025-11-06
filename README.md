@@ -42,6 +42,36 @@ devcheck --workspace
 devcheck --workspace --fmt --clippy
 ```
 
+### Watch Mode
+
+Automatically re-run checks when files change:
+
+```bash
+# Watch mode - re-runs checks on file changes
+devcheck --watch
+
+# Watch mode with specific checks
+devcheck --watch --fmt --clippy
+```
+
+### Output Formats
+
+Generate reports in different formats:
+
+```bash
+# Terminal output (default)
+devcheck
+
+# JSON output for CI/CD
+devcheck --format json
+
+# HTML report
+devcheck --format html > report.html
+
+# Markdown report
+devcheck --format markdown > REPORT.md
+```
+
 ### Configuration File
 
 Create a `.devcheck.toml` file in your project root to customize default behavior:
@@ -66,6 +96,17 @@ args = []
 [devcheck.build]
 enabled = false
 args = []
+
+# Custom checks
+[devcheck.custom.security-audit]
+command = "cargo"
+enabled = true
+args = ["audit"]
+
+[devcheck.custom.doc-coverage]
+command = "cargo"
+enabled = true
+args = ["doc", "--no-deps"]
 ```
 
 See `.devcheck.toml.example` for a complete example.
@@ -80,6 +121,9 @@ See `.devcheck.toml.example` for a complete example.
 - ⚙️ **Configuration File**: Customize behavior with `.devcheck.toml`
 - 🏢 **Workspace Support**: Run checks across all workspace members
 - 📈 **Progress Bars**: Real-time progress indicators for running checks
+- 🔌 **Custom Checks**: Add your own custom checks via configuration
+- 👀 **Watch Mode**: Automatically re-run checks when files change
+- 📄 **Multiple Formats**: Generate reports in Terminal, JSON, HTML, or Markdown
 
 ## Development Status
 
@@ -93,11 +137,16 @@ See `.devcheck.toml.example` for a complete example.
 - Configuration file support (`.devcheck.toml`)
 - Workspace support
 - Progress bars
-
-### Phase 3: Planned 🔄
 - Custom check addition functionality
 - Watch mode (file change detection)
 - HTML/Markdown report generation
+
+### Phase 3: Future 🔮
+- Incremental checks (changed files only)
+- Caching functionality
+- GitHub Actions integration
+- VS Code extension integration
+- Project statistics collection
 
 ## Design
 

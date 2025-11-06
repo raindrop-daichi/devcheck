@@ -1,10 +1,12 @@
 mod build;
 mod clippy;
+mod custom;
 mod fmt;
 mod test;
 
 pub use build::BuildChecker;
 pub use clippy::ClippyChecker;
+pub use custom::CustomChecker;
 pub use fmt::FmtChecker;
 pub use test::TestChecker;
 

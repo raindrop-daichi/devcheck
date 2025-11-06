@@ -27,3 +27,22 @@ args = []
 [devcheck.build]
 enabled = false
 args = []
+
+# Custom checks can be added with any name
+# Example: Security audit with cargo-audit
+[devcheck.custom.security-audit]
+command = "cargo"
+enabled = false
+args = ["audit"]
+
+# Example: Check documentation coverage
+[devcheck.custom.doc-coverage]
+command = "cargo"
+enabled = false
+args = ["doc", "--no-deps"]
+
+# Example: Run a custom script
+[devcheck.custom.custom-script]
+command = "./scripts/custom-check.sh"
+enabled = false
+args = []

@@ -4,6 +4,35 @@
 
 devcheckは、Rustプロジェクトの品質チェックを効率的に実行するためのCLIツールです。`cargo fmt`、`cargo clippy`、`cargo test`を並列実行し、結果を見やすく要約して表示します。
 
+## 実装状況
+
+**現在のバージョン: v0.1.0**
+
+### 実装完了 ✅
+
+**フェーズ1: コア機能**
+- ✅ 基本的なfmt/clippy/test実行
+- ✅ 並列実行（tokio）
+- ✅ ターミナル出力（カラー対応）
+- ✅ JSON出力（CI/CD対応）
+
+**フェーズ2: 機能拡張**
+- ✅ 設定ファイルサポート（`.devcheck.toml`）
+- ✅ ワークスペース対応（`--workspace`）
+- ✅ プログレスバー（リアルタイム表示）
+- ✅ カスタムチェック追加機能
+- ✅ ウォッチモード（`--watch`）
+- ✅ HTML/Markdownレポート生成
+
+### 今後の予定 🔮
+
+**フェーズ3: 高度な機能**
+- インクリメンタルチェック（変更ファイルのみ）
+- キャッシュ機能
+- GitHub Actions統合
+- VS Code拡張連携
+- プロジェクト統計情報収集
+
 ## 目的
 
 - **効率化**: 複数のチェックを並列実行することで、開発フィードバックループを高速化
@@ -327,11 +356,11 @@ pub enum DevCheckError {
 - [x] JSON出力
 
 ### フェーズ2（機能拡張）
-- [ ] 設定ファイルサポート（`.devcheck.toml`）
-- [ ] ワークスペース対応
-- [ ] カスタムチェック追加機能
-- [ ] ウォッチモード（ファイル変更検知）
-- [ ] HTML/Markdown レポート生成
+- [x] 設定ファイルサポート（`.devcheck.toml`）
+- [x] ワークスペース対応
+- [x] カスタムチェック追加機能
+- [x] ウォッチモード（ファイル変更検知）
+- [x] HTML/Markdown レポート生成
 
 ### フェーズ3（高度な機能）
 - [ ] インクリメンタルチェック（変更ファイルのみ）
@@ -339,6 +368,127 @@ pub enum DevCheckError {
 - [ ] GitHub Actions統合
 - [ ] VS Code拡張連携
 - [ ] プロジェクト統計情報収集
+
+## 実装詳細（フェーズ2）
+
+### 設定ファイルサポート
+
+`.devcheck.toml`ファイルでプロジェクト固有の設定を定義できます：
+
+```toml
+[devcheck]
+timeout = 300
+parallel = true
+
+[devcheck.fmt]
+enabled = true
+args = []
+
+[devcheck.clippy]
+enabled = true
+args = ["--", "-D", "warnings"]
+
+[devcheck.test]
+enabled = true
+args = []
+
+[devcheck.build]
+enabled = false
+args = []
+```
+
+### ワークスペース対応
+
+`--workspace`フラグを使用すると、すべてのワークスペースメンバーに対してチェックを実行します：
+
+```bash
+devcheck --workspace
+devcheck --workspace --fmt --clippy
+```
+
+各チェッカーは自動的に`--workspace`または`--all`フラグをcargoコマンドに追加します。
+
+### カスタムチェック
+
+任意のコマンドをカスタムチェックとして追加可能：
+
+```toml
+[devcheck.custom.security-audit]
+command = "cargo"
+enabled = true
+args = ["audit"]
+
+[devcheck.custom.doc-coverage]
+command = "cargo"
+enabled = true
+args = ["doc", "--no-deps"]
+
+[devcheck.custom.custom-script]
+command = "./scripts/check.sh"
+enabled = true
+args = []
+```
+
+`CustomChecker`実装により、任意のコマンドを並列実行フレームワークに統合できます。
+
+### ウォッチモード
+
+`--watch`フラグでファイル変更を監視し、自動的にチェックを再実行：
+
+```bash
+devcheck --watch
+devcheck -w
+```
+
+**機能：**
+- `.rs`と`.toml`ファイルの変更を監視
+- 再帰的にディレクトリを監視
+- 1秒のデバウンス機能で頻繁な再実行を防止
+- 変更検知時に視覚的なフィードバック
+
+**実装：**
+- `notify`クレートを使用したファイルシステム監視
+- 非同期ループでのイベント処理
+- 変更検知時に新しい`Config`インスタンスで再実行
+
+### HTML/Markdownレポート
+
+複数のフォーマットでレポートを生成：
+
+**HTMLレポート (`--format html`):**
+- レスポンシブデザイン
+- カラーコード化されたステータスバッジ
+- グリッドレイアウトでの統計表示
+- プロフェッショナルなスタイリング
+- ブラウザで表示可能
+
+**Markdownレポート (`--format markdown`):**
+- GitHub互換のMarkdown
+- 絵文字ステータスインジケーター（✅/❌）
+- `<details>`タグを使用した折りたたみ可能な出力
+- ドキュメントに埋め込み可能
+
+**使用例：**
+```bash
+devcheck --format html > report.html
+devcheck --format markdown > REPORT.md
+devcheck --format json > report.json
+```
+
+### プログレスバー
+
+実行中のチェックをリアルタイムで表示：
+
+```
+⠁ Running fmt...
+⠁ Running clippy...
+⠁ Running test...
+```
+
+- `indicatif`クレートを使用
+- ターミナル出力モードでのみ表示
+- 各チェックの進行状況を視覚化
+- 完了時に自動的にクリア
 
 ### 拡張ポイント
 
@@ -382,27 +532,37 @@ pub enum DevCheckError {
 
 ## 実装優先順位
 
-### Phase 1: MVP（最小実装）
+### Phase 1: MVP（最小実装）✅
 1. ✓ プロジェクト構造作成
 2. ✓ CLI基本実装（clap）
 3. ✓ 単一チェック実行（fmt/clippy/test）
 4. ✓ 基本的な出力
 5. ✓ エラーハンドリング
 
-### Phase 2: 並列実行
-1. tokio統合
-2. 並列タスク実行
-3. 結果集約
+### Phase 2: 並列実行 ✅
+1. ✓ tokio統合
+2. ✓ 並列タスク実行
+3. ✓ 結果集約
 
-### Phase 3: 出力改善
-1. カラフルなターミナル出力
-2. プログレスバー
-3. JSON出力
+### Phase 3: 出力改善 ✅
+1. ✓ カラフルなターミナル出力
+2. ✓ プログレスバー
+3. ✓ JSON出力
 
-### Phase 4: 仕上げ
-1. テスト追加
-2. ドキュメント整備
-3. CI/CD設定
+### Phase 4: 機能拡張 ✅
+1. ✓ 設定ファイルサポート
+2. ✓ ワークスペース対応
+3. ✓ カスタムチェック
+4. ✓ ウォッチモード
+5. ✓ HTML/Markdownレポート
+6. ✓ ドキュメント整備
+
+### Phase 5: 高度な機能（今後の予定）
+1. インクリメンタルチェック
+2. キャッシュ機能
+3. GitHub Actions統合
+4. テスト追加
+5. CI/CD設定
 
 ## テスト戦略
 

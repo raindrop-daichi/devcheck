@@ -21,7 +21,7 @@ impl Checker for CustomChecker {
         &self.name
     }
 
-    async fn run(&self, _config: &Config) -> Result<CheckResult> {
+    async fn run(&self, config: &Config) -> Result<CheckResult> {
         let start = Instant::now();
 
         let mut cmd = Command::new(&self.config.command);
@@ -30,7 +30,12 @@ impl Checker for CustomChecker {
             cmd.arg(arg);
         }
 
-        let output = cmd.output().await?;
+        let output =
+            tokio::time::timeout(std::time::Duration::from_secs(config.timeout), cmd.output())
+                .await
+                .map_err(|_| {
+                    anyhow::anyhow!("Check timed out after {} seconds", config.timeout)
+                })??;
         let duration = start.elapsed();
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();

@@ -26,7 +26,12 @@ impl Checker for TestChecker {
             cmd.arg("--manifest-path").arg(path);
         }
 
-        let output = cmd.output().await?;
+        let output =
+            tokio::time::timeout(std::time::Duration::from_secs(config.timeout), cmd.output())
+                .await
+                .map_err(|_| {
+                    anyhow::anyhow!("Check timed out after {} seconds", config.timeout)
+                })??;
         let duration = start.elapsed();
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();

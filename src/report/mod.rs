@@ -1,5 +1,5 @@
 use crate::checker::{CheckResult, CheckStatus};
-use crate::config::{Config, OutputFormat};
+use crate::config::{ColorMode, Config, OutputFormat};
 use anyhow::Result;
 use colored::*;
 use serde::Serialize;
@@ -53,6 +53,16 @@ impl Report {
 }
 
 pub fn display_report(report: &Report, config: &Config) -> Result<()> {
+    // Set color mode based on config
+    match config.color {
+        ColorMode::Always => colored::control::set_override(true),
+        ColorMode::Never => colored::control::set_override(false),
+        ColorMode::Auto => {
+            // Let colored crate auto-detect
+            colored::control::unset_override();
+        }
+    }
+
     match config.format {
         OutputFormat::Terminal => display_terminal(report, config),
         OutputFormat::Json => display_json(report),
@@ -83,13 +93,11 @@ fn display_terminal(report: &Report, config: &Config) -> Result<()> {
         let symbol = match check.status {
             CheckStatus::Passed => "✓".green(),
             CheckStatus::Failed => "✗".red(),
-            CheckStatus::Skipped => "○".yellow(),
         };
 
         let status_str = match check.status {
             CheckStatus::Passed => "PASSED".green(),
             CheckStatus::Failed => "FAILED".red(),
-            CheckStatus::Skipped => "SKIPPED".yellow(),
         };
 
         println!(
@@ -290,7 +298,6 @@ fn display_html(report: &Report) -> Result<()> {
                 let status_class = match check.status {
                     CheckStatus::Passed => "passed",
                     CheckStatus::Failed => "failed",
-                    CheckStatus::Skipped => "skipped",
                 };
                 let status_text = format!("{:?}", check.status).to_uppercase();
                 let errors_html = if !check.errors.is_empty() {
@@ -365,7 +372,6 @@ fn display_markdown(report: &Report) -> Result<()> {
         let symbol = match check.status {
             CheckStatus::Passed => "✅",
             CheckStatus::Failed => "❌",
-            CheckStatus::Skipped => "⏭️",
         };
         let status = format!("{:?}", check.status).to_uppercase();
 
@@ -406,4 +412,6 @@ fn html_escape(s: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+        .replace('\n', "<br>")
+        .replace('\r', "")
 }

@@ -29,10 +29,17 @@ async fn main() -> Result<()> {
 }
 
 async fn run_checks_once(config: &config::Config) -> Result<i32> {
-    let results = runner::run_checks(config).await?;
-    let report = report::Report::from_results(results, config.start_time);
-    report::display_report(&report, config)?;
-    Ok(if report.has_failures() { 1 } else { 0 })
+    match runner::run_checks(config).await {
+        Ok(results) => {
+            let report = report::Report::from_results(results, config.start_time);
+            report::display_report(&report, config)?;
+            Ok(if report.has_failures() { 1 } else { 0 })
+        }
+        Err(e) => {
+            eprintln!("Error executing checks: {}", e);
+            Ok(2) // Exit code 2 for execution errors
+        }
+    }
 }
 
 async fn run_watch_mode(config: config::Config) -> Result<()> {
@@ -74,7 +81,16 @@ async fn run_watch_mode(config: config::Config) -> Result<()> {
                 let mut new_config = config.clone();
                 new_config.start_time = std::time::Instant::now();
 
-                let _ = run_checks_once(&new_config).await?;
+                match run_checks_once(&new_config).await {
+                    Ok(exit_code) => {
+                        if exit_code != 0 {
+                            eprintln!("Checks completed with exit code: {}", exit_code);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error running checks: {}", e);
+                    }
+                }
                 last_run = std::time::Instant::now();
             }
         }

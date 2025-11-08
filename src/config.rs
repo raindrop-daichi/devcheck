@@ -17,6 +17,7 @@ pub struct Config {
     pub verbose: bool,
     pub color: ColorMode,
     pub manifest_path: Option<String>,
+    // Note: jobs field is reserved for future use to control parallelism
     pub jobs: Option<usize>,
     pub timeout: u64,
     pub workspace: bool,

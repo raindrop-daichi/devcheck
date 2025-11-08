@@ -27,11 +27,9 @@ pub struct CheckResult {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
-#[allow(dead_code)]
 pub enum CheckStatus {
     Passed,
     Failed,
-    Skipped,
 }
 
 fn serialize_duration<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>

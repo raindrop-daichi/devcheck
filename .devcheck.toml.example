@@ -1,0 +1,48 @@
+# devcheck configuration file example
+# Copy this file to .devcheck.toml to use it
+
+[devcheck]
+# Timeout for each check in seconds
+timeout = 300
+
+# Run checks in parallel
+parallel = true
+
+# Formatting check configuration
+[devcheck.fmt]
+enabled = true
+args = []
+
+# Clippy check configuration
+[devcheck.clippy]
+enabled = true
+args = ["--", "-D", "warnings"]
+
+# Test check configuration
+[devcheck.test]
+enabled = true
+args = []
+
+# Build check configuration (disabled by default)
+[devcheck.build]
+enabled = false
+args = []
+
+# Custom checks can be added with any name
+# Example: Security audit with cargo-audit
+[devcheck.custom.security-audit]
+command = "cargo"
+enabled = false
+args = ["audit"]
+
+# Example: Check documentation coverage
+[devcheck.custom.doc-coverage]
+command = "cargo"
+enabled = false
+args = ["doc", "--no-deps"]
+
+# Example: Run a custom script
+[devcheck.custom.custom-script]
+command = "./scripts/custom-check.sh"
+enabled = false
+args = []
